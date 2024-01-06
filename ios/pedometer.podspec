@@ -3,7 +3,7 @@
 # Run `pod lib lint pedometer.podspec' to validate before publishing.
 #
 Pod::Spec.new do |s|
-  s.name             = 'pedometer'
+  s.name             = 'pedometer_plus'
   s.version          = '0.0.1'
   s.summary          = 'Pedometer and Step Detection for Android and iOS'
   s.description      = <<-DESC
