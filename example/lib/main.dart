@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:pedometer/pedometer.dart';
 
 String formatDate(DateTime d) {
@@ -17,9 +17,12 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Stream<StepCount> _stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
-  String _status = '?', _steps = '?';
+
+  final _pedometer = Pedometer();
+  PedestrianStatus _status = PedestrianStatus.unknown;
+  int _streamedStepCount = 0;
+  int _stepCounts = 0;
 
   @override
   void initState() {
@@ -27,32 +30,34 @@ class _MyAppState extends State<MyApp> {
     initPlatformState();
   }
 
-  void onStepCount(StepCount event) {
-    print(event);
+  void onStepCount(int step) {
+    print(step);
     setState(() {
-      _steps = event.steps.toString();
+      _streamedStepCount = step;
     });
   }
 
-  void onPedestrianStatusChanged(PedestrianStatus event) {
-    print(event);
+  void onPedestrianStatusChanged(PedestrianStatus status) {
+    print(status);
     setState(() {
-      _status = event.status;
+      _status = status;
     });
   }
 
   void onPedestrianStatusError(error) {
     print('onPedestrianStatusError: $error');
+    print('Pedestrian Status not available');
     setState(() {
-      _status = 'Pedestrian Status not available';
+      _status = PedestrianStatus.unknown;
     });
     print(_status);
   }
 
   void onStepCountError(error) {
     print('onStepCountError: $error');
+    print('Step Count not available');
     setState(() {
-      _steps = 'Step Count not available';
+      _streamedStepCount = 0;
     });
   }
 
@@ -62,10 +67,31 @@ class _MyAppState extends State<MyApp> {
         .listen(onPedestrianStatusChanged)
         .onError(onPedestrianStatusError);
 
-    _stepCountStream = Pedometer.stepCountStream;
-    _stepCountStream.listen(onStepCount).onError(onStepCountError);
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    _pedometer
+        .stepCountStreamFrom(from: todayStart)
+        .listen(onStepCount)
+        .onError(onStepCountError);
+
+    _getStepCount();
 
     if (!mounted) return;
+  }
+
+  Future<void> _getStepCount() async {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    final stepCounts = await _pedometer.getStepCount(
+      from: todayStart,
+      to: DateTime.now(),
+    );
+
+    setState(() {
+      _stepCounts = stepCounts;
+    });
+    print('Step Count: $_stepCounts');
   }
 
   @override
@@ -80,12 +106,24 @@ class _MyAppState extends State<MyApp> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Text(
+                'Stream Steps Taken',
+                style: TextStyle(fontSize: 30),
+              ),
+              Text(
+                _streamedStepCount.toString(),
+                style: TextStyle(fontSize: 60),
+              ),
+              Text(
                 'Steps Taken',
                 style: TextStyle(fontSize: 30),
               ),
               Text(
-                _steps,
+                _stepCounts.toString(),
                 style: TextStyle(fontSize: 60),
+              ),
+              TextButton(
+                onPressed: _getStepCount,
+                child: Text('Get Step Count'),
               ),
               Divider(
                 height: 100,
@@ -97,17 +135,18 @@ class _MyAppState extends State<MyApp> {
                 style: TextStyle(fontSize: 30),
               ),
               Icon(
-                _status == 'walking'
+                _status == PedestrianStatus.walking
                     ? Icons.directions_walk
-                    : _status == 'stopped'
+                    : _status == PedestrianStatus.stopped
                         ? Icons.accessibility_new
                         : Icons.error,
                 size: 100,
               ),
               Center(
                 child: Text(
-                  _status,
-                  style: _status == 'walking' || _status == 'stopped'
+                  _status.name,
+                  style: _status == PedestrianStatus.walking ||
+                          _status == PedestrianStatus.stopped
                       ? TextStyle(fontSize: 30)
                       : TextStyle(fontSize: 20, color: Colors.red),
                 ),

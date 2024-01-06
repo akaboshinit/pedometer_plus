@@ -1,15 +1,18 @@
 import 'dart:async';
-
-import 'package:flutter/services.dart';
 import 'dart:io' show Platform;
 
-const int _stopped = 0, _walking = 1;
+import 'package:flutter/services.dart';
 
 class Pedometer {
   static const EventChannel _stepDetectionChannel =
       const EventChannel('step_detection');
   static const EventChannel _stepCountChannel =
       const EventChannel('step_count');
+
+  static const MethodChannel _methodChannel =
+      MethodChannel('dev.akaboshinit.pedometer_plus');
+  static const EventChannel _eventChannel =
+      const EventChannel('dev.akaboshinit.pedometer_plus.stream');
 
   static StreamController<PedestrianStatus> _androidPedestrianController =
       StreamController.broadcast();
@@ -19,7 +22,7 @@ class Pedometer {
   static Stream<PedestrianStatus> get pedestrianStatusStream {
     Stream<PedestrianStatus> stream = _stepDetectionChannel
         .receiveBroadcastStream()
-        .map((event) => PedestrianStatus._(event));
+        .map((event) => PedestrianStatus.values[event as int]);
     if (Platform.isAndroid) return _androidStream(stream);
     return stream;
   }
@@ -29,11 +32,11 @@ class Pedometer {
       Stream<PedestrianStatus> stream) {
     /// Init a timer and a status
     Timer? t;
-    int? pedestrianStatus;
+    PedestrianStatus? pedestrianStatus;
 
     /// Listen for events on the original stream
     /// Transform these events by using the timer
-    stream.listen((dynamic e) {
+    stream.listen((_) {
       /// If an event is received it means the status is 'walking'
       /// If the timer has been started, it should be cancelled
       /// to prevent sending out additional 'walking' events
@@ -42,9 +45,10 @@ class Pedometer {
 
         /// If a previous status was either not set yet, or was 'stopped'
         /// then a 'walking' event should be emitted.
-        if (pedestrianStatus == null || pedestrianStatus == _stopped) {
-          _androidPedestrianController.add(PedestrianStatus._(_walking));
-          pedestrianStatus = _walking;
+        if (pedestrianStatus == null ||
+            pedestrianStatus == PedestrianStatus.stopped) {
+          _androidPedestrianController.add(PedestrianStatus.walking);
+          pedestrianStatus = PedestrianStatus.walking;
         }
       }
 
@@ -52,8 +56,8 @@ class Pedometer {
       /// which a 'stopped' event is emitted. If it manages to go through,
       /// it is because no events were received for the 2 second duration
       t = Timer(Duration(seconds: 2), () {
-        _androidPedestrianController.add(PedestrianStatus._(_stopped));
-        pedestrianStatus = _stopped;
+        _androidPedestrianController.add(PedestrianStatus.stopped);
+        pedestrianStatus = PedestrianStatus.stopped;
       });
     });
 
@@ -62,55 +66,49 @@ class Pedometer {
 
   /// Returns the steps taken since last system boot.
   /// Events may come with a delay.
-  static Stream<StepCount> get stepCountStream => _stepCountChannel
-      .receiveBroadcastStream()
-      .map((event) => StepCount._(event));
-}
+  static Stream<int> get stepCountStream =>
+      _stepCountChannel.receiveBroadcastStream().map((event) => event as int);
 
-/// A DTO for steps taken containing the number of steps taken.
-class StepCount {
-  late DateTime _timeStamp;
-  int _steps = 0;
+  Stream<int> stepCountStreamFrom({
+    required DateTime from,
+  }) {
+    if (Platform.isAndroid) {
+      throw UnsupportedError(
+          'stepCountStreamFrom() is not supported on Android. Use stepCountStream instead.');
+    }
 
-  StepCount._(dynamic e) {
-    _steps = e as int;
-    _timeStamp = DateTime.now();
+    return _eventChannel.receiveBroadcastStream({
+      'startTime': from.millisecondsSinceEpoch,
+    }).map((event) => event as int);
   }
 
-  int get steps => _steps;
+  Future<int> getStepCount({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    if (Platform.isAndroid) {
+      throw UnsupportedError(
+          'getStepCount() is not supported on Android. Use stepCountStream instead.');
+    }
 
-  DateTime get timeStamp => _timeStamp;
-
-  @override
-  String toString() =>
-      'Steps taken: $_steps at ${_timeStamp.toIso8601String()}';
+    final args = <String, dynamic>{
+      'startTime': from.millisecondsSinceEpoch,
+      'endTime': to.millisecondsSinceEpoch
+    };
+    final int steps = await _methodChannel.invokeMethod(
+      'getStepCount',
+      args,
+    );
+    return steps;
+  }
 }
 
-/// A DTO for steps taken containing a detected step and its corresponding
-/// status, i.e. walking, stopped or unknown.
-class PedestrianStatus {
-  static const _WALKING = 'walking';
-  static const _STOPPED = 'stopped';
-  static const _UNKNOWN = 'unknown';
+enum PedestrianStatus {
+  walking(statusCode: 0),
+  stopped(statusCode: 1),
+  unknown(statusCode: 2);
 
-  static const Map<int, String> _STATUSES = {
-    _stopped: _STOPPED,
-    _walking: _WALKING
-  };
+  const PedestrianStatus({required this.statusCode});
 
-  late DateTime _timeStamp;
-  String _status = _UNKNOWN;
-
-  PedestrianStatus._(dynamic t) {
-    int _type = t as int;
-    _status = _STATUSES[_type]!;
-    _timeStamp = DateTime.now();
-  }
-
-  String get status => _status;
-
-  DateTime get timeStamp => _timeStamp;
-
-  @override
-  String toString() => 'Status: $_status at ${_timeStamp.toIso8601String()}';
+  final int statusCode;
 }
