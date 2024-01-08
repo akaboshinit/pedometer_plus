@@ -104,8 +104,8 @@ class Pedometer {
 }
 
 enum StepStatus {
-  walking(statusCode: 0),
-  stopped(statusCode: 1),
+  stopped(statusCode: 0),
+  walking(statusCode: 1),
   unknown(statusCode: 2);
 
   const StepStatus({required this.statusCode});
