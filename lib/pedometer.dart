@@ -14,25 +14,24 @@ class Pedometer {
   static const EventChannel _eventChannel =
       const EventChannel('dev.akaboshinit.pedometer_plus.stream');
 
-  static StreamController<PedestrianStatus> _androidPedestrianController =
+  static StreamController<StepStatus> _androidStepStatusController =
       StreamController.broadcast();
 
   /// Returns one step at a time.
   /// Events come every time a step is detected.
-  static Stream<PedestrianStatus> get pedestrianStatusStream {
-    Stream<PedestrianStatus> stream = _stepDetectionChannel
+  Stream<StepStatus> stepStatusStream() {
+    Stream<StepStatus> stream = _stepDetectionChannel
         .receiveBroadcastStream()
-        .map((event) => PedestrianStatus.values[event as int]);
+        .map((event) => StepStatus.values[event as int]);
     if (Platform.isAndroid) return _androidStream(stream);
     return stream;
   }
 
   /// Transformed stream for the Android platform
-  static Stream<PedestrianStatus> _androidStream(
-      Stream<PedestrianStatus> stream) {
+  static Stream<StepStatus> _androidStream(Stream<StepStatus> stream) {
     /// Init a timer and a status
     Timer? t;
-    PedestrianStatus? pedestrianStatus;
+    StepStatus? stepStatus;
 
     /// Listen for events on the original stream
     /// Transform these events by using the timer
@@ -45,10 +44,9 @@ class Pedometer {
 
         /// If a previous status was either not set yet, or was 'stopped'
         /// then a 'walking' event should be emitted.
-        if (pedestrianStatus == null ||
-            pedestrianStatus == PedestrianStatus.stopped) {
-          _androidPedestrianController.add(PedestrianStatus.walking);
-          pedestrianStatus = PedestrianStatus.walking;
+        if (stepStatus == null || stepStatus == StepStatus.stopped) {
+          _androidStepStatusController.add(StepStatus.walking);
+          stepStatus = StepStatus.walking;
         }
       }
 
@@ -56,17 +54,19 @@ class Pedometer {
       /// which a 'stopped' event is emitted. If it manages to go through,
       /// it is because no events were received for the 2 second duration
       t = Timer(Duration(seconds: 2), () {
-        _androidPedestrianController.add(PedestrianStatus.stopped);
-        pedestrianStatus = PedestrianStatus.stopped;
+        _androidStepStatusController.add(StepStatus.stopped);
+        stepStatus = StepStatus.stopped;
       });
+    }, onError: (error) {
+      _androidStepStatusController.addError(error);
     });
 
-    return _androidPedestrianController.stream;
+    return _androidStepStatusController.stream;
   }
 
   /// Returns the steps taken since last system boot.
   /// Events may come with a delay.
-  static Stream<int> get stepCountStream =>
+  Stream<int> stepCountStream() =>
       _stepCountChannel.receiveBroadcastStream().map((event) => event as int);
 
   Stream<int> stepCountStreamFrom({
@@ -103,12 +103,12 @@ class Pedometer {
   }
 }
 
-enum PedestrianStatus {
+enum StepStatus {
   walking(statusCode: 0),
   stopped(statusCode: 1),
   unknown(statusCode: 2);
 
-  const PedestrianStatus({required this.statusCode});
+  const StepStatus({required this.statusCode});
 
   final int statusCode;
 }
