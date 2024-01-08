@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:pedometer_plus/pedometer.dart';
+import 'package:pedometer_plus/pedometer_plus.dart';
 
 String formatDate(DateTime d) {
   return d.toString().substring(0, 19);
