@@ -1,10 +1,23 @@
 # Pedometer
 
-[![pub package](https://img.shields.io/pub/v/pedometer.svg)](https://pub.dartlang.org/packages/pedometer)
+<!-- [![pub package](https://img.shields.io/pub/v/pedometer.svg)](https://pub.dartlang.org/packages/pedometer) -->
 
 This plugin allows for continuous step counting and pedestrian status using the built-in pedometer sensor API of iOS and Android devices.
 
-![](https://raw.githubusercontent.com/cph-cachet/flutter-plugins/master/packages/pedometer/imgs/screenshots.png)
+<img height="500px" src="images/example.png"/>
+
+## Platform support
+
+✅ supported
+❔ supported, but not tested locally.
+❌ not supported
+
+| Feature                                                              | Android | iOS |
+| ------------------------------                                       | :-----: | :-: |
+| stepStatusStream                                                     | ❔      | ✅  |
+| stepCountStream (All steps taken from the system.)                   | ✅      | ✅  |
+| stepCountStreamFrom (Steps since the stipulated date)                | ❌      | ✅  |
+| getStepCount (Number of steps between specified beginning and end.)  | ❌      | ✅  |
 
 ## Permissions
 
@@ -19,10 +32,6 @@ For iOS, add the following entries to your Info.plist file in the Runner xcode p
 ```xml
 <key>NSMotionUsageDescription</key>
 <string>This application tracks your steps</string>
-<key>UIBackgroundModes</key>
-<array>
-    <string>processing</string>
-</array>
 ```
 
 ## Step Count
@@ -43,45 +52,3 @@ Both Step Count and Pedestrian Status may not be available on some phones:
 * Older iPhones do not support Pedestrian Status in particular
 
 In the case that the step sensor is not available, an error will be thrown. The application needs to handle this error.
-
-## Example Usage
-
-See the [example app](https://github.com/cph-cachet/flutter-plugins/blob/master/packages/pedometer/example/lib/main.dart) for a fully-fledged example.
-
-Below is shown a more generalized example. Remember to set the required permissions, as described above. This may require you to manually allow the permission in the "Settings" on the phone.
-
-``` dart
-  Stream<StepCount> _stepCountStream;
-  Stream<PedestrianStatus> _pedestrianStatusStream;
-
-  /// Handle step count changed
-  void onStepCount(StepCount event) {
-    int steps = event.steps;
-    DateTime timeStamp = event.timeStamp;
-  }
-
-  /// Handle status changed
-  void onPedestrianStatusChanged(PedestrianStatus event) {
-    String status = event.status;
-    DateTime timeStamp = event.timeStamp;
-  }
-
-    /// Handle the error
-  void onPedestrianStatusError(error) {}
-
-  /// Handle the error
-  void onStepCountError(error) {}
-
-  Future<void> initPlatformState() async {
-    // Init streams
-    _pedestrianStatusStream = await Pedometer.pedestrianStatusStream;
-    _stepCountStream = await Pedometer.stepCountStream;
-
-    // Listen to streams and handle errors
-    _stepCountStream.listen(onStepCount).onError(onStepCountError);
-
-    _pedestrianStatusStream
-      .listen(onPedestrianStatusChanged)
-      .onError(onPedestrianStatusError);
-  }
-```
