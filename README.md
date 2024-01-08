@@ -6,6 +6,8 @@ This plugin allows for continuous step counting and pedestrian status using the 
 
 <img height="500px" src="images/example.png"/>
 
+Examples of the StepStatusStream screen on iOS.
+
 ## Platform support
 
 ✅ supported
@@ -52,3 +54,10 @@ Both Step Count and Pedestrian Status may not be available on some phones:
 * Older iPhones do not support Pedestrian Status in particular
 
 In the case that the step sensor is not available, an error will be thrown. The application needs to handle this error.
+
+
+Forked packages
+- https://github.com/cph-cachet/flutter-plugins/tree/master/packages/pedometer
+
+Inspired packages
+- https://github.com/santa112358/simple_pedometer
