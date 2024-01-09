@@ -4,14 +4,16 @@
 
 This plugin allows for continuous step counting and pedestrian status using the built-in pedometer sensor API of iOS and Android devices.
 
-<img height="500px" src="images/example.png"/>
+<img height="500px" src="https://github.com/akaboshinit/pedometer_plus/raw/main/images/example.png"/>
 
 Examples of the StepStatusStream screen on iOS.
 
 ## Platform support
 
 ✅ supported
+
 ❔ supported, but not tested locally.
+
 ❌ not supported
 
 | Feature                                                              | Android | iOS |
